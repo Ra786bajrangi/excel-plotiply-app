@@ -1,0 +1,17 @@
+// models/fileModel.js
+import mongoose from 'mongoose';
+
+const fileSchema = new mongoose.Schema({
+  filename: { type: String, required: true },
+  path: String,
+  recordCount: Number,
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  date: { type: Date, default: Date.now },
+});
+
+const File = mongoose.model('File', fileSchema);
+export default File;
