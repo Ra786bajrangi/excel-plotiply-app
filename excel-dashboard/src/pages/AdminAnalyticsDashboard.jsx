@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import DashboardCharts from '../components/DashboardCharts';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function AdminAnalyticsDashboard() {
@@ -33,7 +34,7 @@ export default function AdminAnalyticsDashboard() {
         <StatCard label="Total Uploads" value={data.totalUploads} />
       </div>
 
-      
+      <DashboardCharts analytics={data} />
     </div>
   );
 }

@@ -4,21 +4,24 @@ import {
   LineChart, Line
 } from 'recharts';
 
-export default function DashboardCharts({ users=[] }) {
-  const activeCount = users.filter(u =>u.isActive).length;
-  const inactiveCount = users.filter(u => !u.isActive).length;
-   console.log(activeCount)
-
+export default function DashboardCharts({ analytics } ) {
+  if (!analytics) {
+    return (
+      <div className="text-gray-500 text-center py-10">
+        Loading analytics data...
+      </div>
+    );
+  }
   const statusData = [
-    { name: 'Active', value: activeCount },
-    { name: 'Inactive', value: inactiveCount }
+    { name: 'Active', value: analytics.activeUsers },
+    { name: 'Inactive', value: analytics.inactiveUsers },
   ];
 
-  const uploadData = users.map(user => ({
-    name: user.name,
-    uploads: user.uploadCount ?? user.uploadedFiles?.length ?? 0
-  }));
-
+  const uploadData = analytics.userUploads?.map(user => ({
+    name: user.username ?? 'Unknown',
+    uploads: user.uploadCount ?? 0
+  })) ?? [];
+  console.log(uploadData)
   return (
     <div className="mt-10 space-y-10">
       <div>

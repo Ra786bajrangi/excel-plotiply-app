@@ -1,10 +1,16 @@
 import { useContext } from 'react';
+import { useNavigate } from 'react-router-dom';  
+
 import { authContext } from '../context/authContext';
 import { User, Mail, Shield, Lock, Pencil } from 'lucide-react';
 
 export default function UserPage() {
   const { user } = useContext(authContext);
-
+  const navigate = useNavigate();  
+   
+  const handleUpdateProfile = () => {
+    navigate('/update');  // Navigate to update profile page
+  };
   return (
     <div className="min-h-screen bg-gradient-to-tr from-blue-50 to-white p-8">
       <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-8">
@@ -51,9 +57,13 @@ export default function UserPage() {
                 <button className="flex items-center gap-2 w-full px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded transition">
                   <Lock size={18} /> Change Password
                 </button>
-                <button className="flex items-center gap-2 w-full px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded transition">
-                  <Pencil size={18} /> Update Profile
-                </button>
+                <button
+  onClick={handleUpdateProfile}
+  className="flex items-center gap-2 w-full px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded transition"
+>
+  <Pencil size={18} /> Update Profile
+</button>
+
               </div>
             </div>
           </div>
