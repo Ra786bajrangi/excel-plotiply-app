@@ -6,7 +6,7 @@ import uploadRoute from './routes/uploadRoute.js';
 import uploadhistoryRoute from './routes/uploadhistoryRoute.js';
 import analyseRoute from './routes/analyze.js'
 import adminRoutes from './routes/admin.js';
-
+import profileRoute from'./routes/Profile.js';
 import errorHandler from './middleware/errorMiddleware.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -30,7 +30,7 @@ app.use(express.json());
 app.use('/api/auth', authRoute);
 app.use('/api/upload', uploadRoute); 
 app.use('/api',uploadhistoryRoute,analyseRoute);
-
+app.use('/api/profile', profileRoute);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/admin', adminRoutes);
