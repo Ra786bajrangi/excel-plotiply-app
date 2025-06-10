@@ -38,7 +38,7 @@ export default function Dashboard() {
               Edit Profile
             </button>
             {user?.role === 'admin' && (
-              <button className="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition">
+              <button className="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition"onClick={() => navigate('/user-list')}>
                 Manage Users
               </button>
             )}

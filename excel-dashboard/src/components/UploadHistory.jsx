@@ -17,6 +17,8 @@ const UploadHistory = ({ token }) => {
       const res = await axios.get(`${API_URL}/history`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
+      console.log('RAW API RESPONSE:', res.data);  // Add this line
+   
       setHistory(res.data.uploadedFiles || []);
     } catch (err) {
       setError(err.message);
@@ -72,8 +74,11 @@ const handleDelete = async (fileId) => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {history.map((file, index) => {
-            const date = new Date(file.uploadDate || file.createdAt);
-            const isValidDate = !isNaN(date.getTime());
+           const uploadDate = file.uploadDate ? new Date(file.uploadDate) : null;
+  const createdAt = file.createdAt ? new Date(file.createdAt) : null;
+
+  // Fallback to current date if null
+  const displayDate = uploadDate || createdAt || new Date();
 
             return (
               <motion.div
@@ -88,13 +93,19 @@ const handleDelete = async (fileId) => {
                     {file.filename}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {isValidDate ? date.toLocaleString() : 'Unknown date'}
+                    {displayDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
                   </p>
                 </div>
 
                 <div className="flex justify-end mt-4">
                   <button
-                    onClick={() => handleDelete(file)}
+                    onClick={() => handleDelete(file._id)}
                     disabled={deletingId === file._id}
                     className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Delete"

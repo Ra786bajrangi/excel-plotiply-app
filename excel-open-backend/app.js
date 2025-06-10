@@ -8,6 +8,8 @@ import analyseRoute from './routes/analyze.js'
 import adminRoutes from './routes/admin.js';
 import profileRoute from'./routes/Profile.js';
 import errorHandler from './middleware/errorMiddleware.js';
+import activityRoutes from'./routes/activity.js';
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -35,6 +37,8 @@ app.use('/api/profile', profileRoute);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/admin', adminRoutes);
 
+
+app.use('/api/activities', activityRoutes);
 
 // Error handling
 app.use(errorHandler);

@@ -10,8 +10,9 @@ const fileSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  date: { type: Date, default: Date.now },
-});
+  uploadDate: { type: Date, default: Date.now },
+  createdAt: { type: Date }  
+ }, { timestamps: true });
 
 const File = mongoose.model('File', fileSchema);
 export default File;

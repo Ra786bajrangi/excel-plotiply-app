@@ -1,342 +1,475 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+ import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import ThemeToggle from './ThemeToggle';
+
+import PlotlyChart from './PlotlyChart';
 
 import {
-  BarChart, Bar,
-  LineChart, Line,
-  PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import Plot from 'react-plotly.js';
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  ArcElement
+} from 'chart.js';
+import {
+  Bar,
+  Line,
+  Pie,
+  Doughnut,
+  Scatter,
+  Bubble
+} from 'react-chartjs-2';
+import { saveAs } from 'file-saver';
+import { PDFDocument, rgb } from 'pdf-lib';
+import AIInsightData from './AiInsightData';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-const BAR_FILL = 'url(#barGradient)';
-const LINE_STROKE = '#FF6B6B';
 
-export default function AnalysisComponent() {
-  const { state } = useLocation();
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  ArcElement
+);
+
+export default function AnalyticsDashboard() {
+  const { theme } = useTheme();
+ 
   const navigate = useNavigate();
-  const chartRef = useRef();
-
-  const [xAxis, setXAxis] = useState('');
-  const [yAxis, setYAxis] = useState('');
-  const [zAxis, setZAxis] = useState('');
-  const [chartType, setChartType] = useState('Bar');
-
+  const [activeTab, setActiveTab] = useState('2d');
+  const [chartType, setChartType] = useState('bar');
   const [excelData, setExcelData] = useState([]);
   const [columns, setColumns] = useState([]);
-  const [aiInsight, setAiInsight] = useState('');
+  const [selectedX, setSelectedX] = useState('');
+  const [selectedY, setSelectedY] = useState('');
+  const [selectedZ, setSelectedZ] = useState('');
+  const [chartTitle, setChartTitle] = useState('My Chart');
+  const [chartColor, setChartColor] = useState('#3b82f6');
+ 
+
+  const twoDCharts = [
+    { id: 'bar', name: 'Bar Chart' },
+    { id: 'line', name: 'Line Chart' },
+    { id: 'pie', name: 'Pie Chart' },
+    { id: 'doughnut', name: 'Doughnut Chart' },
+    { id: 'scatter', name: 'Scatter Plot' },
+    { id: 'bubble', name: 'Bubble Chart' }
+  ];
+
+  const threeDCharts = [
+    { id: '3d-bar', name: '3D Bar Chart' },
+    { id: '3d-scatter', name: '3D Scatter Plot' },
+    { id: '3d-bubble', name: '3D Bubble Chart' }
+  ];
 
   useEffect(() => {
-    try {
-      const storedData = localStorage.getItem('excelData');
-      const storedColumns = localStorage.getItem('columns');
+    const storedData = localStorage.getItem('excelData');
+    const storedColumns = localStorage.getItem('columns');
 
-      if (storedData && storedColumns) {
+    if (storedData && storedColumns) {
+      try {
         setExcelData(JSON.parse(storedData));
-        setColumns(JSON.parse(storedColumns));
-      } else {
-        console.warn('No data found in localStorage. Please upload an Excel file.');
+        const parsedColumns = JSON.parse(storedColumns);
+        setColumns(parsedColumns);
+
+        if (parsedColumns.length > 0) {
+          setSelectedX(parsedColumns[0]);
+          if (parsedColumns.length > 1) setSelectedY(parsedColumns[1]);
+          if (parsedColumns.length > 2) setSelectedZ(parsedColumns[2]);
+        }
+      } catch (error) {
+        console.error('Error parsing stored data:', error);
+        navigate('/excel-dashboard');
       }
-    } catch (error) {
-      console.error('Error parsing stored data:', error);
+    } else {
+      navigate('/excel-dashboard');
     }
-  }, []);
+  }, [navigate]);
 
-  const getChartData = () => {
-    if (!xAxis || !yAxis || !excelData.length) return [];
+  const prepareChartData = () => {
+    if (!selectedX || !selectedY || excelData.length === 0) return { labels: [], datasets: [] };
 
-    return excelData
-      .filter(row => row[xAxis] !== undefined && row[yAxis] !== undefined)
-      .map(row => ({
-        [xAxis]: row[xAxis],
-        [yAxis]: isNaN(row[yAxis]) ? 0 : Number(row[yAxis]),
-        ...(zAxis && { [zAxis]: isNaN(row[zAxis]) ? 0 : Number(row[zAxis]) })
-      }));
+    const labels = excelData.map(row => row[selectedX]);
+
+    if (chartType === 'pie' || chartType === 'doughnut') {
+      return {
+        labels,
+        datasets: [{
+          label: selectedY,
+          data: excelData.map(row => Number(row[selectedY])),
+          backgroundColor: labels.map(() => `hsl(${Math.random() * 360}, 70%, 50%)`),
+          borderWidth: 1
+        }]
+      };
+    }
+
+    if (chartType.includes('bubble')) {
+      return {
+        datasets: [{
+          label: `${selectedY} vs ${selectedX}`,
+          data: excelData.map(row => ({
+            x: Number(row[selectedX]),
+            y: Number(row[selectedY]),
+            r: selectedZ ? Math.abs(Number(row[selectedZ])) / 10 : 10
+          })),
+          backgroundColor: chartColor
+        }]
+      };
+    }
+
+    if (chartType.includes('scatter')) {
+      return {
+        datasets: [{
+          label: `${selectedY} vs ${selectedX}`,
+          data: excelData.map(row => ({
+            x: Number(row[selectedX]),
+            y: Number(row[selectedY])
+          })),
+          backgroundColor: chartColor
+        }]
+      };
+    }
+
+    return {
+      labels,
+      datasets: [{
+        label: selectedY,
+        data: excelData.map(row => Number(row[selectedY])),
+        backgroundColor: chartColor,
+        borderColor: chartColor,
+        borderWidth: 1
+      }]
+    };
   };
 
-  const handleDownload = async (type) => {
-    if (!chartRef.current) return;
-    const canvas = await html2canvas(chartRef.current);
-    const dataUrl = canvas.toDataURL('image/png');
-
-    if (type === 'png') {
-      const link = document.createElement('a');
-      link.download = 'chart.png';
-      link.href = dataUrl;
-      link.click();
-    } else if (type === 'pdf') {
-      const pdf = new jsPDF();
-      pdf.addImage(dataUrl, 'PNG', 10, 10, 180, 100);
-      pdf.save('chart.pdf');
-    }
+  const getChartOptions = () => {
+    const textColor = theme === 'dark' ? '#f3f4f6' : '#111827';
+    const gridColor = theme === 'dark' ? '#4b5563' : '#e5e7eb';
+    
+    return {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top',labels: { color: textColor } },
+        title: { display: true, text: chartTitle,color: textColor }
+      },
+      scales: {
+        x: { title: { display: true, text: selectedX,color: textColor },
+      grid: { color: gridColor },
+          ticks: { color: textColor } },
+        y: { title: { display: true, text: selectedY, color: textColor },
+      grid: { color: gridColor },
+          ticks: { color: textColor } }
+      }
+    };
   };
-  
-  const generateInsight = (data) => {
-    if (!data.length || !xAxis || !yAxis) return '';
-
-    const values = data.map(item => item[yAxis]);
-    const total = values.reduce((sum, val) => sum + val, 0);
-    const avg = total / values.length;
-    const max = Math.max(...values);
-    const min = Math.min(...values);
-
-    const maxItem = data.find(item => item[yAxis] === max);
-    const minItem = data.find(item => item[yAxis] === min);
-
-    if (chartType === 'Pie') {
-      return `The pie chart shows the contribution of each ${xAxis} to the total ${yAxis}. The highest contribution is from "${maxItem?.[xAxis]}" (${max}), while the lowest is "${minItem?.[xAxis]}" (${min}).`;
-    }
-
-    if (chartType === 'Line') {
-      return `The line chart shows trends in ${yAxis} across ${xAxis}. The average value is ${avg.toFixed(2)}. The peak is at "${maxItem?.[xAxis]}" with ${max}, and the lowest at "${minItem?.[xAxis]}" with ${min}.`;
-    }
-
-    if (chartType === '3D Bar') {
-      return `The 3D bar chart visualizes ${yAxis} and ${zAxis} grouped by ${xAxis}. The highest value is ${max} (${maxItem?.[xAxis]}), the lowest is ${min} (${minItem?.[xAxis]}), and the average is ${avg.toFixed(2)}.`;
-    }
-
-    if (chartType === '3D Scatter') {
-      return `The 3D scatter plot shows the relationship between ${xAxis}, ${yAxis}, and ${zAxis}. The data points are distributed across these three dimensions.`;
-    }
-
-    // Default (Bar)
-    return `The bar chart visualizes ${yAxis} grouped by ${xAxis}. The highest value is ${max} (${maxItem?.[xAxis]}), the lowest is ${min} (${minItem?.[xAxis]}), and the average is ${avg.toFixed(2)}.`;
-  };
-
-  useEffect(() => {
-    const data = getChartData();
-    const insight = generateInsight(data);
-    setAiInsight(insight);
-  }, [xAxis, yAxis, zAxis, chartType, excelData]);
 
   const renderChart = () => {
-    const data = getChartData();
-    if (!data.length) return <p className="text-gray-500 text-center py-20">No valid data for chart</p>;
+    if (chartType.startsWith('3d')) {
+      return (
+        
+<div className="w-full h-[500px]">
+ 
+
+        <PlotlyChart
+          type={chartType}
+          data={excelData}
+          x={selectedX}
+          y={selectedY}
+          z={selectedZ}
+          color={chartColor}
+          title={chartTitle}
+        />
+        </div>
+      );
+    }
+
+    const data = prepareChartData();
+    const options = getChartOptions();
 
     switch (chartType) {
-      case 'Line':
-        return (
-          <LineChart data={data}>
-            <defs>
-              <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#FF6B6B" />
-                <stop offset="100%" stopColor="#4ECDC4" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey={xAxis} tick={{ fill: '#4A5568' }} />
-            <YAxis tick={{ fill: '#4A5568' }} />
-            <Tooltip contentStyle={{ backgroundColor: '#2D3748', borderRadius: '8px', color: '#F7FAFC' }} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey={yAxis}
-              stroke="url(#lineGradient)"
-              strokeWidth={3}
-              dot={{ fill: '#FF6B6B', r: 5 }}
-              activeDot={{ r: 8 }}
-            />
-          </LineChart>
-        );
+      case 'bar': return <Bar data={data} options={options} />;
+      case 'line': return <Line data={data} options={options} />;
+      case 'pie': return <Pie data={data} options={options} />;
+      case 'doughnut': return <Doughnut data={data} options={options} />;
+      case 'scatter': return <Scatter data={data} options={options} />;
+      case 'bubble': return <Bubble data={data} options={options} />;
+      default: return <Bar data={data} options={options} />;
+    }
+  };
 
-      case 'Pie':
-        return (
-          <PieChart>
-            <Tooltip contentStyle={{ backgroundColor: '#2D3748', borderRadius: '8px', color: '#F7FAFC' }} />
-            <Legend />
-            <Pie
-              data={data}
-              dataKey={yAxis}
-              nameKey={xAxis}
-              cx="50%"
-              cy="50%"
-              outerRadius={120}
-              innerRadius={60}
-              paddingAngle={5}
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              labelLine={false}
-            >
-              {data.map((_, i) => (
-                <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-          </PieChart>
-        );
 
-      case '3D Bar':
-        return (
-          <Plot
-            data={[
-              {
-                type: 'bar3d',
-                x: data.map(item => item[xAxis]),
-                y: data.map(item => item[yAxis]),
-                z: data.map(item => item[zAxis]),
-                colorscale: 'Viridis',
-                opacity: 0.8
-              }
-            ]}
-            layout={{
-              title: `${xAxis} vs ${yAxis} vs ${zAxis}`,
-              scene: {
-                xaxis: { title: xAxis },
-                yaxis: { title: yAxis },
-                zaxis: { title: zAxis }
-              },
-              margin: { l: 0, r: 0, b: 0, t: 30 }
-            }}
-            style={{ width: '100%', height: '100%' }}
-          />
-        );
 
-      case '3D Scatter':
-        return (
-          <Plot
-            data={[
-              {
-                type: 'scatter3d',
-                mode: 'markers',
-                x: data.map(item => item[xAxis]),
-                y: data.map(item => item[yAxis]),
-                z: data.map(item => item[zAxis]),
-                marker: {
-                  size: 5,
-                  color: data.map(item => item[yAxis]),
-                  colorscale: 'Viridis',
-                  opacity: 0.8
-                }
-              }
-            ]}
-            layout={{
-              title: `${xAxis} vs ${yAxis} vs ${zAxis}`,
-              scene: {
-                xaxis: { title: xAxis },
-                yaxis: { title: yAxis },
-                zaxis: { title: zAxis }
-              },
-              margin: { l: 0, r: 0, b: 0, t: 30 }
-            }}
-            style={{ width: '100%', height: '100%' }}
-          />
-        );
 
-      case 'Bar':
-      default:
-        return (
-          <BarChart data={data}>
-            <defs>
-              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4F46E5" />
-                <stop offset="100%" stopColor="#8B5CF6" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey={xAxis} tick={{ fill: '#4A5568' }} />
-            <YAxis tick={{ fill: '#4A5568' }} />
-            <Tooltip contentStyle={{ backgroundColor: '#2D3748', borderRadius: '8px', color: '#F7FAFC' }} />
-            <Legend />
-            <Bar dataKey={yAxis} fill={BAR_FILL} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        );
+ 
+
+  const downloadAsPNG = async () => {
+    const chartElement = document.querySelector('canvas');
+    if (chartElement) {
+      const image = chartElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `${chartTitle || 'chart'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const downloadAsPDF = async () => {
+    const chartElement = document.querySelector('canvas');
+    if (!chartElement) return;
+
+    try {
+      const image = chartElement.toDataURL('image/png');
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([600, 400]);
+      
+      const imageBytes = await fetch(image).then(res => res.arrayBuffer());
+      const pdfImage = await pdfDoc.embedPng(imageBytes);
+      
+      const { width, height } = pdfImage.scale(0.5);
+      page.drawImage(pdfImage, {
+        x: 50,
+        y: page.getHeight() - height - 50,
+        width,
+        height,
+      });
+      
+      page.drawText(chartTitle, {
+        x: 50,
+        y: page.getHeight() - 30,
+        size: 18,
+        color: rgb(0, 0, 0),
+      });
+      
+      const pdfBytes = await pdfDoc.save();
+      saveAs(new Blob([pdfBytes], { type: 'application/pdf' }), `${chartTitle || 'chart'}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Chart Controls */}
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Chart Controls</h2>
-        <div className="space-y-4">
-          {/* Chart Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Chart Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              {['Bar', 'Line', 'Pie', '3D Bar', '3D Scatter'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => setChartType(type)}
-                  className={`py-2 px-3 rounded-md transition ${chartType === type ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* X-Axis Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">X-Axis</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md"
-              value={xAxis}
-              onChange={e => setXAxis(e.target.value)}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        
+  
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Data Visualization Dashboard</h1>
+          <div className="flex items-center space-x-4">
+           <ThemeToggle />
+       
+          <button 
+            onClick={() => navigate('/upload')}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition"
+          >
+            Back to Upload
+          </button>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === '2d' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => {
+                setActiveTab('2d');
+                setChartType('bar');
+              }}
             >
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
-          </div>
-
-          {/* Y-Axis Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Y-Axis</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md"
-              value={yAxis}
-              onChange={e => setYAxis(e.target.value)}
+              2D Charts
+            </button>
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === '3d' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => {
+                setActiveTab('3d');
+                setChartType('3d-bar');
+              }}
             >
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
+              3D Charts
+            </button>
           </div>
 
-          {/* Z-Axis Selector (only for 3D charts) */}
-          {(chartType === '3D Bar' || chartType === '3D Scatter') && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Z-Axis</label>
-              <select
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={zAxis}
-                onChange={e => setZAxis(e.target.value)}
-              >
-                {columns.map(col => <option key={col} value={col}>{col}</option>)}
-              </select>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium text-gray-800 mb-3">Chart Type</h3>
+                <div className="space-y-2">
+                  {(activeTab === '2d' ? twoDCharts : threeDCharts).map((chart) => (
+                    <div key={chart.id} className="flex items-center">
+                      <input
+                        id={`chart-${chart.id}`}
+                        name="chart-type"
+                        type="radio"
+                        checked={chartType === chart.id}
+                        onChange={() => setChartType(chart.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor={`chart-${chart.id}`} className="ml-2 text-gray-700">
+                        {chart.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium text-gray-800 mb-3">Chart Settings</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="chart-title" className="block text-sm font-medium text-gray-700 mb-1">
+                      Chart Title
+                    </label>
+                    <input
+                      type="text"
+                      id="chart-title"
+                      value={chartTitle}
+                      onChange={(e) => setChartTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="chart-color" className="block text-sm font-medium text-gray-700 mb-1">
+                      Chart Color
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="color"
+                        id="chart-color"
+                        value={chartColor}
+                        onChange={(e) => setChartColor(e.target.value)}
+                        className="h-10 w-10 cursor-pointer"
+                      />
+                      <span className="ml-2 text-gray-700">{chartColor}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium text-gray-800 mb-3">Data Axes</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="x-axis" className="block text-sm font-medium text-gray-700 mb-1">
+                      X Axis
+                    </label>
+                    <select
+                      id="x-axis"
+                      value={selectedX}
+                      onChange={(e) => setSelectedX(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {columns.map((column) => (
+                        <option key={`x-${column}`} value={column}>
+                          {column}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="y-axis" className="block text-sm font-medium text-gray-700 mb-1">
+                      Y Axis
+                    </label>
+                    <select
+                      id="y-axis"
+                      value={selectedY}
+                      onChange={(e) => setSelectedY(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {columns.map((column) => (
+                        <option key={`y-${column}`} value={column}>
+                          {column}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {(chartType === '3d-scatter' || chartType === '3d-bubble' || chartType === '3d-surface') && (
+                    <div>
+                      <label htmlFor="z-axis" className="block text-sm font-medium text-gray-700 mb-1">
+                        Z Axis
+                      </label>
+                      <select
+                        id="z-axis"
+                        value={selectedZ}
+                        onChange={(e) => setSelectedZ(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {columns.map((column) => (
+                          <option key={`z-${column}`} value={column}>
+                            {column}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium text-gray-800 mb-3">Export Chart</h3>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={downloadAsPNG}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
+                  >
+                    PNG
+                  </button>
+                  <button
+                    onClick={downloadAsPDF}
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
+                  >
+                    PDF
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Download Buttons */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <button onClick={() => handleDownload('png')} className="bg-green-600 text-white py-2 rounded-md">Download PNG</button>
-            <button onClick={() => handleDownload('pdf')} className="bg-purple-600 text-white py-2 rounded-md">Download PDF</button>
+
+            <div className="lg:col-span-3">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 h-full">
+                <div className="h-[500px] w-full flex items-center justify-center">
+                  {excelData.length > 0 && selectedX && selectedY ? (
+                    <>
+                    {console.log('Rendering 3D chart with:', chartType, selectedX, selectedY, selectedZ, excelData)}
+
+                   { renderChart()}
+                   </> 
+
+                  ) : (
+                    <div className="text-gray-500 text-center">
+                      <p>No data available or axes not selected</p>
+                      <p>Please configure your chart settings</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+               
+   
+            </div>
+           <div className="mt-6">
+      <AIInsightData 
+        data={excelData} 
+        className="hover:shadow-lg transition-shadow duration-300"
+      />
+    </div>
+        
+
           </div>
         </div>
-      </div>
-
-      {/* Chart Container */}
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Data Visualization</h2>
-          <div className="text-sm text-gray-500">
-            {chartType} Chart: {xAxis} vs {yAxis} 
-            {(chartType === '3D Bar' || chartType === '3D Scatter') && ` vs ${zAxis}`}
-          </div>
-        </div>
-        <div ref={chartRef} className="w-full h-96">
-          {chartType.startsWith('3D') ? (
-            renderChart()
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart()}
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-      
-      {/* ai insight*/}
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">📊 AI Insight</h2>
-        <p className="text-gray-700 text-base">{aiInsight || 'Please select X and Y axes to view insights.'}</p>
       </div>
     </div>
   );

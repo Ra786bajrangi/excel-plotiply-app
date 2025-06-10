@@ -66,6 +66,8 @@ class UpdateProfile extends Component {
   handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      console.log("Selected file:", file.name, file.size); // Debug log
+   
       const reader = new FileReader();
       reader.onloadend = () => {
         this.setState({
@@ -137,6 +139,7 @@ class UpdateProfile extends Component {
             <div className="relative w-24 h-24 mb-4">
               <img
                 src={avatarPreview || "/default-avatar.png"}
+               
                 alt="Avatar"
                 className="w-full h-full rounded-full object-cover border-2 border-gray-200"
               />

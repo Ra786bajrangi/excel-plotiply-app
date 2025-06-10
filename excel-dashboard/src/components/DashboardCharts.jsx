@@ -17,11 +17,11 @@ export default function DashboardCharts({ analytics } ) {
     { name: 'Inactive', value: analytics.inactiveUsers },
   ];
 
-  const uploadData = analytics.userUploads?.map(user => ({
+  const uploadData = analytics.uploadsByUser?.map(user => ({
     name: user.username ?? 'Unknown',
     uploads: user.uploadCount ?? 0
   })) ?? [];
-  console.log(uploadData)
+  
   return (
     <div className="mt-10 space-y-10">
       <div>

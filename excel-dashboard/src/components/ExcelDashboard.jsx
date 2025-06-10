@@ -73,7 +73,7 @@ export default function ExcelDashboard() {
     setStatus('File processed successfully!');
 
     // Navigate to analysis page (no need to pass state anymore)
-    navigate('/analysis');
+    navigate('/analytics');
 
   } catch (error) {
     console.error('Processing error:', error);

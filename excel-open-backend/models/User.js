@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { type } from 'os';
 
 const userSchema = mongoose.Schema(
   {
@@ -12,9 +13,9 @@ const userSchema = mongoose.Schema(
       required: true,
       unique: true
     },
-    avtar:{
-        type:String,
-        required:true
+    avatar:{
+      type:String,
+      default: "https://example.com/default-avatar.png"
     },
     password: {
       type: String,

@@ -1,11 +1,7 @@
 import express from 'express';
-import mongoose from 'mongoose';
-import fs from 'fs';
-import path from 'path';
-
-import User from '../models/User.js';
-import { protect } from '../middleware/authMiddleware.js';
-import File from '../models/fileModel.js'; 
+import User from '../models/User.js'
+import File from '../models/fileModel.js';
+import { protect } from '../middleware/authMiddleware.js'
 
 const router = express.Router();
 
@@ -17,10 +13,25 @@ router.get('/history', protect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Ensure we only send one response
+    // Get complete file documents with dates
+    const files = await File.find({
+      _id: { $in: user.uploadedFiles }
+    })
+    .select('filename uploadDate createdAt')
+    .sort({ uploadDate: -1 })
+    .lean();
+
+    // Format dates for frontend
+    const formattedFiles = files.map(file => ({
+      ...file,
+      _id: file._id.toString(), // Ensure ID is string
+      uploadDate: file.uploadDate?.toISOString() || new Date().toISOString(),
+      createdAt: file.createdAt?.toISOString() || new Date().toISOString()
+    }));
+
     return res.json({
       success: true,
-      uploadedFiles: user.uploadedFiles || []
+      uploadedFiles: formattedFiles
     });
 
   } catch (err) {
@@ -32,15 +43,4 @@ router.get('/history', protect, async (req, res) => {
   }
 });
 
-
-
-
-
-
-export default router;
-
-
-
-
-
-
+export default router

@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import ActivityLog from '../models/ActivityLog.js';
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -32,7 +33,11 @@ export const register = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
-
+     await ActivityLog.create({
+      user: user._id,
+      action: "login",
+      details: `${user.username} logged in`,
+    });
     res.status(201).json({
       _id: user._id,
       username: user.username,
@@ -69,6 +74,7 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
+     
 
     res.json({
       _id: user._id,

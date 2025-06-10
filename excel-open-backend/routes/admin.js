@@ -56,15 +56,40 @@ router.get('/analytics', protect, admin, async (req, res) => {
     const activeUsers = await User.countDocuments({ isActive: true });
     const inactiveUsers = totalUsers - activeUsers;
 
-    const totalUploads = await File.countDocuments();
-    
+    const totalUploads = await File.countDocuments({ uploadedBy: { $ne: null } });
+    const uploadsByUser = await File.aggregate([
+      {
+        $group: {
+          _id: '$uploadedBy', // Assuming 'uploadedBy' stores user _id
+          uploadCount: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      {
+        $unwind: '$userInfo'
+      },
+      {
+        $project: {
+          username: '$userInfo.username',
+          uploadCount: 1
+        }
+      }
+    ]);
+
 
     res.json({
       totalUsers,
       activeUsers,
       inactiveUsers,
       totalUploads,
-      
+      uploadsByUser
     });
   } catch (err) {
     console.error('Analytics error:', err);

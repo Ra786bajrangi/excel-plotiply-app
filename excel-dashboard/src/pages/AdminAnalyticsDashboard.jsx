@@ -15,7 +15,9 @@ export default function AdminAnalyticsDashboard() {
       const res = await axios.get(`${API_URL}/admin/analytics`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
+      
       setData(res.data);
+      
     } catch (err) {
       console.error('Analytics fetch error:', err);
     }

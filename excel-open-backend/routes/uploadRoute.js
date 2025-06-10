@@ -9,6 +9,7 @@ import { protect } from '../middleware/authMiddleware.js';
 import User from '../models/User.js';
 import File from '../models/fileModel.js';
 import UsageLog from '../models/UsageLog.js'; 
+import ActivityLog from '../models/ActivityLog.js'; // 👈 add at the top if not present
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,17 +62,13 @@ router.post('/', protect, upload.single('file'), async (req, res) => {
     // Link file to user
     user.uploadedFiles.push(newFile._id);
     await user.save();
- // ✅ Log the upload
-    await UsageLog.create({
-      userId: user._id,
-      action: 'upload',
-      details: {
-        filename: req.file.originalname,
-        storedName: req.file.filename,
-        recordCount: sheetData.length,
-        size: req.file.size
-      }
-    });
+ 
+    await ActivityLog.create({
+  user: user._id,
+  action: 'upload',
+  details: `${user.username} uploaded file "${req.file.originalname}" with ${sheetData.length} records.`,
+});
+console.log('📦 Upload activity logged');
     res.json({ message: 'File uploaded successfully', file: newFile });
   } catch (err) {
     console.error('Upload error:', err);

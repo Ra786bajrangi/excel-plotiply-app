@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './app.css';
 import { AuthProvider } from './context/authContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ThemeProvider } from './context/ThemeContext';
+
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -22,10 +24,12 @@ import AdminAnalyticsDashboard from './pages/AdminAnalyticsDashboard';
 import DashboardCharts from './components/DashboardCharts';
 
 import UpdateProfile from './components/UpdateProfile';
+import ActivityCard from './components/ActivityCard';
 
 function App() {
   return (
     <AuthProvider>
+      <ThemeProvider>
       <Router>
         <Routes>
           {/* Public Routes without layout */}
@@ -48,9 +52,10 @@ function App() {
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route element={<Layout />}>
               <Route path="/admin" element={<AdminPage />} />
-              <Route path='/adminuser' element={<AdminUserList/>}/>
+              <Route path='/user-list' element={<AdminUserList/>}/>
               <Route path='/adminanalytics' element={<AdminAnalyticsDashboard/>}/>
               <Route path='/charts' element={<DashboardCharts/>}/>
+              <Route path='/activity'element={<ActivityCard/>}/>
             </Route>
           </Route>
 
@@ -61,6 +66,7 @@ function App() {
           <ToastContainer position="top-right" autoClose={3000} />
         
       </Router>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
