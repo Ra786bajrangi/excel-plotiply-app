@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import ReactMarkdown from 'react-markdown';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function AiInsightData({ data, className = '' }) {
@@ -76,9 +76,9 @@ export default function AiInsightData({ data, className = '' }) {
           </div>
         ) : (
           <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-            <ReactMarkdown className="prose dark:prose-invert max-w-none">
+            
               {insights}
-            </ReactMarkdown>
+            
           </div>
         )}
 
