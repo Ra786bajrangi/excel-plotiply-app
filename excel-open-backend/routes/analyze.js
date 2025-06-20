@@ -1,40 +1,35 @@
-
 import express from 'express';
-import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { CohereClient } from 'cohere-ai';
 
 dotenv.config();
 
-const router = express.Router();
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// Initialize Cohere client (correct for v7+)
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
 });
+
+const router = express.Router();
 
 router.post('/analyze', async (req, res) => {
   const { data } = req.body;
-  
-  const prompt = `You are a data analyst. Analyze this data and provide insights, trends, and patterns:\n${JSON.stringify(data.slice(0, 20))}`;
+
+  const prompt = `You are a data analyst. Analyze this JSON data and provide insights, trends, and patterns:\n${JSON.stringify(data.slice(0, 20))}`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
+    const response = await cohere.generate({
+      model: 'command',
+      prompt,
+      maxTokens: 300,  // Note: camelCase in v7+
+      temperature: 0.5,
     });
 
-    const summary = response.choices[0].message.content;
+    const summary = response.generations[0].text.trim();
     res.json({ summary });
+
   } catch (err) {
-    console.error(err);
-    
-    // Handle quota exceeded error specifically
-    if (err.code === 'insufficient_quota') {
-      return res.status(500).json({ 
-        error: 'OpenAI quota exceeded. Please add credits to your account at https://platform.openai.com/account/billing' 
-      });
-    }
-    
-    res.status(500).json({ error: 'AI analysis failed' });
+    console.error('Cohere API error:', err);
+    res.status(500).json({ error: 'AI analysis failed using Cohere' });
   }
 });
 
