@@ -162,6 +162,9 @@ export default function AnalyticsDashboard() {
         legend: { position: 'top',labels: { color: textColor } },
         title: { display: true, text: chartTitle,color: textColor }
       },
+      layout: {
+        backgroundColor: theme === 'dark' ? '#1f2937' : '#ffffff'
+      },
       scales: {
         x: { title: { display: true, text: selectedX,color: textColor },
       grid: { color: gridColor },
@@ -188,6 +191,7 @@ export default function AnalyticsDashboard() {
           z={selectedZ}
           color={chartColor}
           title={chartTitle}
+          theme={theme}
         />
         </div>
       );
