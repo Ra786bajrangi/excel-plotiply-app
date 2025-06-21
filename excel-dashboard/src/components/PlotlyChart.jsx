@@ -2,16 +2,18 @@ import React from 'react';
 import Plot from 'react-plotly.js';
 import Plotly3DBarChart from './Plotly3DBarChart';
 
-const PlotlyChart = ({ type, data, x, y, z, color, title }) => {
+const PlotlyChart = ({ type, data, x, y, z, color, title, theme }) => {
   if (!data || data.length === 0 || !x || !y) {
     return <p className="text-gray-500">No data to display</p>;
   }
 
-  // Custom component for 3D Bar
+  const isDark = theme === 'dark';
+
+  // Custom component for 3D Bar (already animated and styled)
   if (type === '3d-bar') {
     return (
-      <div className="w-full max-w-4xl h-[500px] overflow-hidden rounded-xl shadow bg-white p-4 mx-auto">
-        <Plotly3DBarChart data={data} x={x} y={y} z={z} color={color} title={title} />
+      <div className={`w-full max-w-4xl h-[500px] overflow-hidden rounded-xl shadow p-4 mx-auto ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <Plotly3DBarChart data={data} x={x} y={y} z={z} color={color} title={title} theme={theme} />
       </div>
     );
   }
@@ -51,18 +53,40 @@ const PlotlyChart = ({ type, data, x, y, z, color, title }) => {
   };
 
   const layout = {
-    title: { text: title || '', font: { size: 18 } },
+    title: {
+      text: title || '',
+      font: { size: 18, color: isDark ? '#ffffff' : '#000000' }
+    },
+    paper_bgcolor: isDark ? '#0f172a' : '#ffffff',
+    plot_bgcolor: isDark ? '#0f172a' : '#ffffff',
+    font: { color: isDark ? '#f1f5f9' : '#111827' },
     margin: { l: 20, r: 20, b: 20, t: 40 },
     scene: {
-      xaxis: { title: x },
-      yaxis: { title: y },
-      zaxis: { title: z || 'Z' },
+      bgcolor: isDark ? '#0f172a' : '#ffffff',
+      xaxis: {
+        title: x,
+        color: isDark ? '#ffffff' : '#000000',
+        gridcolor: isDark ? '#334155' : '#e5e7eb',
+        zerolinecolor: isDark ? '#475569' : '#9ca3af'
+      },
+      yaxis: {
+        title: y,
+        color: isDark ? '#ffffff' : '#000000',
+        gridcolor: isDark ? '#334155' : '#e5e7eb',
+        zerolinecolor: isDark ? '#475569' : '#9ca3af'
+      },
+      zaxis: {
+        title: z || 'Z',
+        color: isDark ? '#ffffff' : '#000000',
+        gridcolor: isDark ? '#334155' : '#e5e7eb',
+        zerolinecolor: isDark ? '#475569' : '#9ca3af'
+      },
     },
     autosize: true,
   };
 
   return (
-    <div className="w-full max-w-4xl h-[500px] overflow-hidden rounded-xl shadow bg-white p-4 mx-auto">
+    <div className={`w-full max-w-4xl h-[500px] overflow-hidden rounded-xl shadow p-4 mx-auto ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
       <Plot
         data={get3DData()}
         layout={layout}
