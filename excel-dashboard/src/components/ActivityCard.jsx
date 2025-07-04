@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { formatDistanceToNow } from "date-fns";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function ActivityCard() {
   const [activities, setActivities] = useState([]);
@@ -9,8 +10,8 @@ export default function ActivityCard() {
 
   const fetchActivities = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/activities", {
-        withCredentials: true, // ✅ Important for auth-protected route
+      const res = await axios.get(`${API_URL}/activities`, {
+        withCredentials: true, 
       });
 
       setActivities(res.data);
